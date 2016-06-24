@@ -42,14 +42,17 @@ par(las=1, mar=c(5,4,1,1))
 # Plot (adjusted or unadjusted) poll results.
 plo_po <- function(po, on_plot_label="")
 {
-	plot(po$DATE, po$REM, pch=po$PSTER, col="red", cex=sqrt(po$N / 1e3),
-	     ylim=range(30, 55),
-	     xlab="mid-date of poll", ylab="%")
+	plot(po$DATE, 100.0 * po$REM / (po$REM + po$LEA),
+	     pch=po$PSTER, col="red", cex=sqrt(po$N / 1e3),
+	     ylim=range(35.8, 64.2),
+	     xlab="mid-date of poll",
+	     ylab="head-to-head % (i.e. setting aside the undecided)")
 	grid()
-	points(po$DATE, po$LEA, pch=po$PSTER, col="blue", cex=sqrt(po$N / 1e3))
-	text(as.Date("2016-03-31"), 29.8, on_plot_label, cex=1.2)
-	legend(as.Date("2016-05-20"), 34, c("remain", "leave"),
-	       col=c("red", "blue"), pch=1, bg="#ffffff2f")
+	points(po$DATE, 100.0 * po$LEA / (po$REM + po$LEA),
+	       pch=po$PSTER, col="blue", cex=sqrt(po$N / 1e3))
+	text(as.Date("2016-03-31"), 35.5, on_plot_label, cex=1.2)
+	legend(as.Date("2016-05-29"), 64, c("remain", "leave"),
+	       col=c("red", "blue"), pch=1)
 }
 
 # Plot the unadjusted poll results.
