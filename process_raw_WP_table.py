@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from datetime import datetime
+from datetime import date, datetime
 from pprint import pprint
 
 def process_WP_table(file_path, year=2016, nice_results_path="results.dat", stan_results_path="stan/data.R", pollster_path="pollsters.dat"):
@@ -70,10 +70,20 @@ def process_WP_table(file_path, year=2016, nice_results_path="results.dat", stan
 
 		results.append((mid_date, rema, leav, unde, n, pollster, pt))
 
+	def quote_result_fields(result):
+		def quote_field_as_appropriate(field):
+			if type(field) == str:
+				return "\"" + field + "\""
+			elif type(field) == date:
+				return "\"" + str(field) + "\""
+			else:
+				return str(field)
+		return [ quote_field_as_appropriate(field) for field in result ]
+
 	nice_results = open(nice_results_path, "ab")
 	nice_results.write("DATE\tREM\tLEA\tUND\tN\tPOLLSTER\tPOLLTYPE\n")
 	for result in results:
-		nice_results.write("\t".join(map(str, result)) + "\n")
+		nice_results.write("\t".join(quote_result_fields(result)) + "\n")
 	nice_results.close()
 
 	def dates_as_ints(dates):
