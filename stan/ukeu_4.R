@@ -23,9 +23,10 @@ par_me <- colMeans(st[7:ncol(st)])
 g_mu <- par_me["grand_mu"]
 g_sig <- par_me["grand_sigma"]
 
-# Roll up the daily shocks estimated by the model into idiosyncratic day
-# effects by taking a rolling sum of the shocks.
-day_delta <- cumsum(par_me[grepl("^epsilon\\.", names(par_me))])
+# Roll up the daily shocks estimated by the model into day effects by
+# taking a rolling sum of the random shocks.
+epsilons <- par_me[grepl("^epsilon\\.", names(par_me))]
+day_delta <- cumsum(epsilons)
 
 # Compute the implied leave vs. undecided vs. remain percentages from the
 # latent mean and standard deviation of public opinion.
@@ -47,7 +48,7 @@ plo_po <- function(po, on_plot_label="")
 	     ylim=range(35.8, 64.2),
 	     xlab="mid-date of poll",
 	     ylab="head-to-head % (i.e. setting aside the undecided)")
-	grid()
+	abline(h=seq(35, 65, 5), col="#0000005f", lty="dotted")
 	points(po$DATE, 100.0 * po$LEA / (po$REM + po$LEA),
 	       pch=po$PSTER, col="blue", cex=sqrt(po$N / 1e3))
 	text(as.Date("2016-03-31"), 35.5, on_plot_label, cex=1.2)
@@ -93,8 +94,7 @@ po_adj_3 <- adjust_po(c(0, par_me["kappa_tel"])
 plo_po(po_adj_3, "adjusted for medium, pollster, and time trend")
 
 # Plot the poll results adjusted, crudely, for a telephone effect,
-# individual pollster effects, a linear time trend, and idiosyncratic day
-# effects.
+# individual pollster effects, a linear time trend, and day effects.
 po_adj_4 <- adjust_po(c(0, par_me["kappa_tel"])
                       [1 + (po_unadj$POLLTYPE == "Telephone")]
                       + par_me[paste0("kappa_pollster.", po_unadj$PSTER)]
@@ -103,8 +103,8 @@ po_adj_4 <- adjust_po(c(0, par_me["kappa_tel"])
 plo_po(po_adj_4, "adjusted for medium, pollster, trend, and day effects")
 
 # Plot the poll results adjusted, crudely, for individual pollster effects,
-# a linear time trend, and idiosyncratic day effects, weighting the results
-# two thirds of the way towards the telephone-derived results.
+# a linear time trend, and day effects, weighting the results two thirds
+# of the way towards the telephone-derived results.
 po_adj_5 <- adjust_po(c(-2 * par_me["kappa_tel"] / 3,
                         1 * par_me["kappa_tel"] / 3)
                       [1 + (po_unadj$POLLTYPE == "Telephone")]
@@ -120,7 +120,7 @@ cat("Basic just-average-everything estimate of referendum result:\n",
     "leave", round(100 * props[1] / (props[1] + props[3]), 1), "%,",
     "remain", round(100 * props[3] / (props[1] + props[3]), 1), "%\n")
 
-# Overlay two stripcharts to illustrate the pollster effects.
+# Overlay two stripcharts to illustrate the estimated pollster effects.
 pollster_effects <- pols
 pollster_effects$REM <- NA
 pollster_effects$LEA <- NA
@@ -140,6 +140,16 @@ grid()
 stripchart(LEA ~ POLLSTER, pollster_effects, add=TRUE, col="blue")
 abline(v=100.0 * props[3] / (props[1] + props[3]), lty="dotted", col="red")
 abline(v=100.0 * props[1] / (props[1] + props[3]), lty="dotted", col="blue")
+
+# Plot the random walk superimposed on the trend (a.k.a. the day effects),
+# and the shocks which produce the walk (the `epsilons`).
+plot(min(po_unadj$DATE) + 1:length(day_delta), day_delta,
+     type="l", xlab="date", ylab="day effect or random daily shock")
+abline(h=seq(-0.4, 0.3, 0.1), lty="dotted", col="#0000005f")
+points(min(po_unadj$DATE) + 1:length(day_delta), epsilons, cex=2/3)
+legend(as.Date("2016-02-01"), -0.3,
+       c("random daily shocks", "day effect (cumulative sum of shocks)"),
+       pch=c(1, NA), lty=c(NA, "solid"), pt.cex=c(2/3, NA))
 
 # Make my own preferred estimate of the head-to-head L-vs.-R result
 # (i.e. weigh the results more towards the telephone poll results, 'cause I
