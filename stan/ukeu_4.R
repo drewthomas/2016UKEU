@@ -47,7 +47,7 @@ plo_po <- function(po, on_plot_label="")
 	     pch=po$PSTER, col="red", cex=sqrt(po$N / 1e3),
 	     ylim=range(35.8, 64.2),
 	     xlab="mid-date of poll",
-	     ylab="head-to-head % (i.e. setting aside the undecided)")
+	     ylab="head-to-head %age (i.e. setting aside the undecided)")
 	abline(h=seq(35, 65, 5), col="#0000005f", lty="dotted")
 	points(po$DATE, 100.0 * po$LEA / (po$REM + po$LEA),
 	       pch=po$PSTER, col="blue", cex=sqrt(po$N / 1e3))
@@ -139,22 +139,27 @@ pollster_effects$DEC <- pollster_effects$REM + pollster_effects$LEA
 pollster_effects$REM <- 100.0 * pollster_effects$REM / pollster_effects$DEC
 pollster_effects$LEA <- 100.0 * pollster_effects$LEA / pollster_effects$DEC
 pollster_effects <- pollster_effects[, c("ID", "POLLSTER", "REM", "LEA")]
-stripchart(REM ~ POLLSTER, pollster_effects, xlim=c(44, 56), col="red",
-           xlab="average % from pollster (adjusted for medium, trend, & day)")
+stripchart(REM ~ POLLSTER, pollster_effects, xlim=c(42, 58), col="red",
+           xlab="average %age on ref. day by pollster (adjusted for medium)")
 grid()
 stripchart(LEA ~ POLLSTER, pollster_effects, add=TRUE, col="blue")
-abline(v=100.0 * props[3] / (props[1] + props[3]), lty="dotted", col="red")
-abline(v=100.0 * props[1] / (props[1] + props[3]), lty="dotted", col="blue")
+abline(v=100.0 * props[3] / (props[1] + props[3]), lty="dashed", col="red")
+abline(v=100.0 * props[1] / (props[1] + props[3]), lty="dashed", col="blue")
+text(45.8, 7, "remain mean\nover all pollsters", col="red", cex=3/4)
+text(54.2, 7, "leave mean\nover all pollsters", col="blue", cex=3/4)
 
 # Plot the random walk superimposed on the trend (a.k.a. the day effects),
 # and the shocks which produce the walk (the `epsilons`).
-plot(min(po_unadj$DATE) + 1:length(day_delta), day_delta,
-     type="l", xlab="date", ylab="day effect or random daily shock")
+plot(min(po_unadj$DATE) - 1 + 1:length(day_delta), day_delta,
+     type="l",
+     xlab="date", ylab="(pro-remain) day effect or random daily shock")
 abline(h=seq(-0.4, 0.3, 0.1), lty="dotted", col="#0000005f")
-points(min(po_unadj$DATE) + 1:length(day_delta), epsilons, cex=2/3)
+points(min(po_unadj$DATE) - 1 + 1:length(day_delta), epsilons, cex=2/3)
 legend(as.Date("2016-02-01"), -0.3,
        c("random daily shocks", "day effect (cumulative sum of shocks)"),
        pch=c(1, NA), lty=c(NA, "solid"), pt.cex=c(2/3, NA))
+abline(v=as.Date("2016-06-16"), col="#00000099", lty="dashed")
+text(as.Date("2016-06-04"), 0.17, "Jo Cox\nassassinated", cex=3/4)
 
 # Make my own preferred estimate of the head-to-head L-vs.-R result
 # (i.e. weigh the results more towards the telephone poll results, 'cause I
@@ -180,7 +185,9 @@ sample_leave_remain_results <- function(N=nrow(st))
 		bet <- ro["beta"]
 		epsilon_row <- ro[grepl("^epsilon\\.", names(st))]
 		final_dd <- sum(epsilon_row)
-		props <- compute_lru_prop(unlist(mu + (bet * max(po_unadj$T)) + final_dd + (2 * k_tel / 3)), unlist(sig))
+		props <- compute_lru_prop(unlist(mu + (167 * bet) + final_dd +
+		                                 (2 * k_tel / 3)),
+		                          unlist(sig))
 		samples$LEA[i] <- round(100 * props[1] / (props[1] + props[3]), 1)
 		samples$REM[i] <- round(100 * props[3] / (props[1] + props[3]), 1)
 	}
@@ -191,7 +198,7 @@ sample_leave_remain_results <- function(N=nrow(st))
 # through resampling.
 cat("Resampling to estimate standard errors...\n")
 #sampled_LR <- sample_leave_remain_results(1000)
-sampled_LR <- sample_leave_remain_results(100)
+sampled_LR <- sample_leave_remain_results(2000)
 LR_ses <- apply(sampled_LR, 2, sd)
 cat("Standard error on those percentages:", round(LR_ses[1], 1), "%\n")
 
@@ -201,3 +208,49 @@ plot(density(epsilons),
 cat("Shapiro-Wilk normality test p-value applied to epsilons:",
     shapiro.test(epsilons)$p.value, "\n")
 grid()
+
+# Plot the model's retrodictions of the proportion undecided, using the
+# estimated grand mean, trend, and day effects.
+daily_und <- rep(NA, 167)
+for (i in 1:length(daily_und)) {
+	daily_und[i] <- compute_lru_prop(g_mu + (i * par_me["beta"]) +
+	                                 day_delta[min(i, 165)], g_sig)[2]
+	daily_und[i] <- 100.0 * daily_und[i]
+}
+plot(min(po_unadj$DATE) - 1 + 1:167, daily_und, type="b", cex=3/4,
+     xlim=range(po_unadj$DATE),
+     xlab="date", ylab="leave/undec./remain %ages estimated by model")
+grid()
+abline(v=as.Date("2016-06-16"), col="#00000099", lty="dashed")
+text(as.Date("2016-06-07"), 14.338, "Jo Cox\nassassinated", cex=3/5)
+
+# Plot the model's retrodictions of the head-to-head leave vs. remain
+# percentages, using the estimated grand mean, trend, and day effects.
+daily_est <- data.frame(LEA=rep(NA, 167), REM=rep(NA, 167))
+for (i in 1:nrow(daily_est)) {
+	props <- compute_lru_prop(g_mu + (i * par_me["beta"]) +
+	                          day_delta[min(i, 165)], g_sig)
+    daily_est$LEA[i] <- 100 * props[1] / (props[1] + props[3])
+    daily_est$REM[i] <- 100 * props[3] / (props[1] + props[3])
+}
+plot(min(po_unadj$DATE) - 1 + 1:167, daily_est$LEA, type="b", col="blue",
+     xlim=range(po_unadj$DATE), ylim=c(35.8, 64.2),
+     xlab="date", ylab="head-to-head %age estimated by model", cex=3/4)
+grid()
+points(min(po_unadj$DATE) - 1 + 1:167, daily_est$REM, type="b", col="red",
+       cex=3/4)
+abline(v=as.Date("2016-06-16"), col="#00000099", lty="dashed")
+text(as.Date("2016-06-04"), 37.5, "Jo Cox\nassassinated", cex=3/4)
+abline(h=51.89, lty="dotted", col="blue")
+text(as.Date("2016-02-01"), 52.4, col="blue", cex=4/5, "final leave %age")
+abline(h=48.11, lty="dotted", col="red")
+text(as.Date("2016-02-01"), 47.6, col="red", cex=4/5, "final remain %age")
+
+# Show the mean and SD of the telephone effect, in percentage points, on
+# the remain percentage.
+props_no_tel <- compute_lru_prop(g_mu, g_sig)
+props_tel <- compute_lru_prop(g_mu + par_me["kappa_tel"], g_sig)
+tel_effec <- props_tel[3] / (props_tel[1] + props_tel[3])
+tel_effec <- tel_effec -
+             (props_no_tel[3] / (props_no_tel[1] + props_no_tel[3]))
+cat("Mean telephone effect: remain", round(100.0 * tel_effec, 1), "% higher\n")
