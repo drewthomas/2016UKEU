@@ -114,7 +114,11 @@ po_adj_5 <- adjust_po(c(-2 * par_me["kappa_tel"] / 3,
 plo_po(po_adj_5, "adjusted for pollster, trend, and day, weighted towards phone polls")
 
 # Generate a basic estimate of the head-to-head leave-vs.-remain result.
-props <- compute_lru_prop(g_mu + day_delta[165], g_sig)
+# (Note the lack of a telephone effect increment here; this calculation
+# effectively adjusts the telephone polls to bring them into line with
+# the online polls.)
+props <- compute_lru_prop(g_mu + (167 * par_me["beta"]) + day_delta[165],
+                          g_sig)
 cat("p_leave, p_undec, p_remain:", props, "\n")
 cat("Basic just-average-everything estimate of referendum result:\n",
     "leave", round(100 * props[1] / (props[1] + props[3]), 1), "%,",
@@ -126,7 +130,8 @@ pollster_effects$REM <- NA
 pollster_effects$LEA <- NA
 basic_estimates <- compute_lru_prop(g_mu, g_sig)
 for (i in pollster_effects$ID) {
-	mu <- g_mu + day_delta[165] + par_me[paste0("kappa_pollster.", i)]
+	mu <- g_mu + (167 * par_me["beta"]) + day_delta[165] +
+	      par_me[paste0("kappa_pollster.", i)]
 	pollster_effects$REM[i] <- compute_lru_prop(mu, g_sig)[3]
 	pollster_effects$LEA[i] <- compute_lru_prop(mu, g_sig)[1]
 }
@@ -154,7 +159,8 @@ legend(as.Date("2016-02-01"), -0.3,
 # Make my own preferred estimate of the head-to-head L-vs.-R result
 # (i.e. weigh the results more towards the telephone poll results, 'cause I
 # suspect their samples are more representative).
-my_mu <- g_mu + day_delta[165] + (2 * par_me["kappa_tel"] / 3)
+my_mu <- g_mu + (167 * par_me["beta"]) + day_delta[165] +
+         (2 * par_me["kappa_tel"] / 3)
 props <- compute_lru_prop(my_mu, g_sig)
 cat("My guess at the referendum result:\n",
     "leave", round(100 * props[1] / (props[1] + props[3]), 1), "%,",
@@ -184,6 +190,14 @@ sample_leave_remain_results <- function(N=nrow(st))
 # Estimate the standard error of the head-to-head prediction/retrodiction
 # through resampling.
 cat("Resampling to estimate standard errors...\n")
-sampled_LR <- sample_leave_remain_results(1000)
+#sampled_LR <- sample_leave_remain_results(1000)
+sampled_LR <- sample_leave_remain_results(100)
 LR_ses <- apply(sampled_LR, 2, sd)
 cat("Standard error on those percentages:", round(LR_ses[1], 1), "%\n")
+
+# Plot a kernel-density estimate of the random daily shock distribution.
+plot(density(epsilons),
+     main="kernel-density estimate of random-daily-shock distribution")
+cat("Shapiro-Wilk normality test p-value applied to epsilons:",
+    shapiro.test(epsilons)$p.value, "\n")
+grid()
