@@ -3,7 +3,7 @@
 
 On the night of [the UK's referendum to leave or remain in the EU](https://en.wikipedia.org/wiki/United_Kingdom_European_Union_membership_referendum,_2016), I made a few last-minute statistical models of [the results of polls taken in 2016 about the referendum](https://en.wikipedia.org/wiki/Opinion_polling_for_the_United_Kingdom_European_Union_membership_referendum#2016).
 
-## Definition of the final model
+## Definition of the final model (`ukeu_4.stan`)
 
 I used the polls which put respondents into three categories: those who intended to vote to remain (R), those who intended to vote to leave (L), and the undecided.
 Because those categories form a 3-point ordinal scale, I decided that a potential voter's preference could be represented as a single number, with positive values representing a preference for R, negative values representing a preference for L, and values close to 0 representing indecision. The distribution of preferences among the electorate could then be represented as a Gaussian distribution with mean &mu; and standard deviation &sigma;<sub>0</sub> (the choice of distribution was arbitrary &mdash; it'd be interesting to experiment with other distributions and see how that changed things), where values between &#8722;1 and +1 represented the undecided, values below &#8722;1 those voting L, and values above +1 those voting R.
@@ -54,7 +54,7 @@ I originally considered having the &delta;<sub>*t*</sub> parameters be i.i.d. wi
 A random walk model for these day-to-day variations therefore made more sense, so I instead defined
 
 > &delta;<sub>1</sub> &equiv; &epsilon;<sub>1</sub>,    
-> with &delta;<sub>*t*</sub> &equiv; &delta;<sub>*t*-1</sub> + &epsilon;<sub>*t*</sub> for *t* &gt; 1,    
+> with &delta;<sub>*t*</sub> &equiv; &delta;<sub>*t*&#8722;1</sub> + &epsilon;<sub>*t*</sub> for *t* &gt; 1,    
 > &epsilon;<sub>*t*</sub> ~ **N**(0, &sigma;<sub>&epsilon;</sub>), and    
 > &sigma;<sub>&epsilon;</sub> ~ ln **N**(ln 0.4, 1)
 
@@ -63,7 +63,7 @@ The effect of these shocks was cumulative, so the day-specific effect &delta;<su
 
 Once Stan estimated &mu;<sub>0</sub>, &sigma;<sub>0</sub>, &kappa;<sub>pollster</sub>, &kappa;<sub>tel</sub>, &beta;, &epsilon;<sub>*t*</sub> for all *t*, and &sigma;<sub>&epsilon;</sub>, I could extract predictions or retrodictions of the L vs. R vs. undecided shares by calculating a &mu; estimate from the parameter estimates, then applying the above formulae for *p*<sub>L</sub> and *p*<sub>R</sub>.
 
-## Model results
+## Model results (`ukeu_4.csv`)
 
 My Stan run gave the following moments of the posterior distributions of the most important parameters.
 Notice the tendency towards leptokurticity for most of the posteriors.
@@ -72,22 +72,22 @@ Notice the tendency towards leptokurticity for most of the posteriors.
 |---------------------------------------------------------|------|------|----------|
 | &mu;<sub>0</sub>                                        | 0.25 | 0.46 | 3.14 |
 | &sigma;<sub>0</sub>                                     | 5.53 | 0.03 | 3.01 |
-| &kappa;<sub>1</sub>, &hellip;, &kappa;<sub>15</sub>     | &#8722;0.6 to +0.4 | 0.44 to 0.50 | 2.99 to 3.13 |
+| &kappa;<sub>pollster</sub> (15 pollster fixed effects)  | &#8722;0.6 to +0.4 | 0.44 to 0.50 | 2.99 to 3.13 |
 | &kappa;<sub>tel</sub>                                   | 0.42 | 0.08 | 2.94 |
 | &beta;                                                  | &#8722;0.003 | 0.007 | 3.83 |
 | &sigma;<sub>&epsilon;</sub>                             | 0.08 | 0.02 | 3.33 |
 | &delta;<sub>165</sub> = &Sigma; &epsilon;<sub>*t*</sub> | &#8722;0.04 | 1.08 | 3.86 |
 
 Most of the parameter estimates are statistically insignificant, in that their means are comparable in size to their standard deviations.
-Specifically, &mu;<sub>0</sub>, the pollster effects, &beta;, and the day effect &delta;<sub>165</sub> of the latest poll, considered alone, are each statistically insignificant.
+Specifically, &mu;<sub>0</sub>, the pollster effects, &beta;, and the day effect &delta;<sub>165</sub> of the last day represented in the data, are each statistically insignificant if considered alone.
 But this fact is potentially misleading because it doesn't allow for correlation in the parameter estimates.
-For example, the &delta;<sub>165</sub> estimates strongly anticorrelate with the &beta; estimates (*r* = &#8722;0.986), and this means that the *combined* effect of the two parameters is in fact statistically significant: the combined effect 165&beta; + &delta;<sub>165</sub> has mean &#8722;0.59 and standard deviation 0.19.
+For example, the &delta;<sub>165</sub> MCMC estimates strongly anticorrelate with the &beta; MCMC estimates (*r* = &#8722;0.986), and this means that the *combined* effect of the two parameters is in fact statistically significant: the combined effect 165&beta; + &delta;<sub>165</sub> has mean &#8722;0.59 and standard deviation 0.19.
 
 An estimate of &mu; on referendum day itself is &mu;<sub>0</sub> + 167&beta; + &delta;<sub>165</sub>, since the day of the referendum, June 27, corresponds to *t* = 167.
-The model can't directly estimate &delta;<sub>167</sub>, because day 167 falls outside the bounds of the data, so &delta;<sub>165</sub> serves as a best estimate of &delta;<sub>167</sub> (since the expected value of &delta;<sub>167</sub> minus &delta;<sub>165</sub> is zero, the model assuming that &delta;<sub>t</sub>'s random walk has no drift).
-From Stan's parameter estimates, the referendum-day &mu; has a posterior distribution with mean &#8722;0.339 and SD 0.454, suggesting a probable advantage for L over R.
+The model can't directly estimate &delta;<sub>167</sub>, because day 167 falls outside the bounds of the data, so &delta;<sub>165</sub> serves as a best estimate of &delta;<sub>167</sub> (&delta;<sub>167</sub> has the same expected value as &delta;<sub>165</sub>, from the modelling assumption that &delta;<sub>t</sub>'s random walk has no drift).
+From Stan's parameter estimates, the referendum-day &mu; has a posterior distribution with mean &#8722;0.339 and SD 0.454, suggesting a probable (albeit statistically insignificant) advantage for L over R.
 
-This conclusion is supported by running an R script to estimate vote shares from that &mu; (and &sigma;<sub>0</sub>); it implies a referendum result of 52.8% for L, and 47.2% for R, with a standard error of 3.8% attaching to either percentage.
+This conclusion is supported by running the R script `ukeu_4.R` to estimate vote shares from that &mu; (and &sigma;<sub>0</sub>); it implies a referendum result of 52.8% for L, and 47.2% for R, with a standard error of 3.8% (derived by Monte Carlo resampling of Stan's posterior samples) attached to either percentage.
 This seems impressively close to the actual referendum result of 51.9% L and 48.1% R, but that's mostly luck; by ignoring the &kappa;<sub>pollster</sub> and &kappa;<sub>tel</sub> parameters this estimate implicitly assumes that the best way to predict/retrodict the referendum result is to assume the online polls had no systematic sampling bias and that, on average, the pollsters had no systematic bias either.
 
 I in fact guessed (apparently wrongly) that the telephone polls had more representative samples than the online polls, and reckoned that splitting the difference 2:1 in favour of the telephone polls was a reasonable guess.
@@ -103,3 +103,4 @@ Because I was trying to predict the referendum's result before it was released, 
 * putting a hyper-prior on the standard deviation of &kappa;<sub>pollster</sub>, rather than just assuming a standard deviation of 2; this would allow for the fact that the final estimates of &kappa;<sub>pollster</sub> clearly have a standard deviation much less than 2
 * modelling the obvious-in-retrospect non-independence of the random shock variables &epsilon;<sub>*t*</sub>
 * modelling the obvious-in-retrospect non-Gaussianness of the random shock variables &epsilon;<sub>*t*</sub> (based on their kurtosis, a *t* distribution with ~ 13 d.o.f. might be more suitable)
+* using the 1&ndash;3 polls (with undecided counts) published too late for me to include them
