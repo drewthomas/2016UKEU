@@ -3,7 +3,7 @@
 
 On the night of [the UK's referendum to leave or remain in the EU](https://en.wikipedia.org/wiki/United_Kingdom_European_Union_membership_referendum,_2016), I made a few last-minute statistical models of [the results of polls taken in 2016 about the referendum](https://en.wikipedia.org/wiki/Opinion_polling_for_the_United_Kingdom_European_Union_membership_referendum#2016).
 
-## Definition of the final model (`ukeu_4.stan`)
+## Definition of the final model (`stan/ukeu_4.stan`)
 
 I used the polls which put respondents into three categories: those who intended to vote to remain (R), those who intended to vote to leave (L), and the undecided.
 Because those categories form a 3-point ordinal scale, I decided that a potential voter's preference could be represented as a single number, with positive values representing a preference for R, negative values representing a preference for L, and values close to 0 representing indecision. The distribution of preferences among the electorate could then be represented as a Gaussian distribution with mean &mu; and standard deviation &sigma;<sub>0</sub> (the choice of distribution was arbitrary &mdash; it'd be interesting to experiment with other distributions and see how that changed things), where values between &#8722;1 and +1 represented the undecided, values below &#8722;1 those voting L, and values above +1 those voting R.
@@ -63,7 +63,7 @@ The effect of these shocks was cumulative, so the day-specific effect &delta;<su
 
 Once Stan estimated &mu;<sub>0</sub>, &sigma;<sub>0</sub>, &kappa;<sub>pollster</sub>, &kappa;<sub>tel</sub>, &beta;, &epsilon;<sub>*t*</sub> for all *t*, and &sigma;<sub>&epsilon;</sub>, I could extract predictions or retrodictions of the L vs. R vs. undecided shares by calculating a &mu; estimate from the parameter estimates, then applying the above formulae for *p*<sub>L</sub> and *p*<sub>R</sub>.
 
-## Model results (`ukeu_4.csv`)
+## Model results (`stan/ukeu_4.csv`)
 
 My Stan run gave the following moments of the posterior distributions of the most important parameters.
 Notice the tendency towards leptokurticity for most of the posteriors.
@@ -87,7 +87,7 @@ An estimate of &mu; on referendum day itself is &mu;<sub>0</sub> + 167&beta; + &
 The model can't directly estimate &delta;<sub>167</sub>, because day 167 falls outside the bounds of the data, so &delta;<sub>165</sub> serves as a best estimate of &delta;<sub>167</sub> (&delta;<sub>167</sub> has the same expected value as &delta;<sub>165</sub>, from the modelling assumption that &delta;<sub>t</sub>'s random walk has no drift).
 From Stan's parameter estimates, the referendum-day &mu; has a posterior distribution with mean &#8722;0.339 and SD 0.454, suggesting a probable (albeit statistically insignificant) advantage for L over R.
 
-This conclusion is supported by running the R script `ukeu_4.R` to estimate vote shares from that &mu; (and &sigma;<sub>0</sub>); it implies a referendum result of 52.8% for L, and 47.2% for R, with a standard error of 3.8% (derived by Monte Carlo resampling of Stan's posterior samples) attached to either percentage.
+This conclusion is supported by running the R script `stan/ukeu_4.R` to estimate vote shares from that &mu; (and &sigma;<sub>0</sub>); it implies a referendum result of 52.8% for L, and 47.2% for R, with a standard error of 3.8% (derived by Monte Carlo resampling of Stan's posterior samples) attached to either percentage.
 This seems impressively close to the actual referendum result of 51.9% L and 48.1% R, but that's mostly luck; by ignoring the &kappa;<sub>pollster</sub> and &kappa;<sub>tel</sub> parameters this estimate implicitly assumes that the best way to predict/retrodict the referendum result is to assume the online polls had no systematic sampling bias and that, on average, the pollsters had no systematic bias either.
 
 I in fact guessed (apparently wrongly) that the telephone polls had more representative samples than the online polls, and reckoned that splitting the difference 2:1 in favour of the telephone polls was a reasonable guess.
