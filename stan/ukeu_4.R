@@ -219,7 +219,7 @@ for (i in 1:length(daily_und)) {
 }
 plot(min(po_unadj$DATE) - 1 + 1:167, daily_und, type="b", cex=3/4,
      xlim=range(po_unadj$DATE),
-     xlab="date", ylab="leave/undec./remain %ages estimated by model")
+     xlab="date", ylab="%age undecided estimated by model")
 grid()
 abline(v=as.Date("2016-06-16"), col="#00000099", lty="dashed")
 text(as.Date("2016-06-07"), 14.338, "Jo Cox\nassassinated", cex=3/5)
